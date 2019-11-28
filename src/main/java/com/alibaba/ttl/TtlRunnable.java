@@ -35,6 +35,7 @@ public final class TtlRunnable implements Runnable, TtlEnhanced, TtlAttachments 
     private final boolean releaseTtlValueReferenceAfterRun;
 
     private TtlRunnable(@NonNull Runnable runnable, boolean releaseTtlValueReferenceAfterRun) {
+        // 获取父线程上下文，并绑定到 capturedRef
         this.capturedRef = new AtomicReference<Object>(capture());
         this.runnable = runnable;
         this.releaseTtlValueReferenceAfterRun = releaseTtlValueReferenceAfterRun;
@@ -45,6 +46,7 @@ public final class TtlRunnable implements Runnable, TtlEnhanced, TtlAttachments 
      */
     @Override
     public void run() {
+        // 获取到的就是 Snapshot 对象
         Object captured = capturedRef.get();
         if (captured == null || releaseTtlValueReferenceAfterRun && !capturedRef.compareAndSet(captured, null)) {
             throw new IllegalStateException("TTL value reference is released after run!");
@@ -131,6 +133,7 @@ public final class TtlRunnable implements Runnable, TtlEnhanced, TtlAttachments 
             if (idempotent) return (TtlRunnable) runnable;
             else throw new IllegalStateException("Already TtlRunnable!");
         }
+        // 包装任务
         return new TtlRunnable(runnable, releaseTtlValueReferenceAfterRun);
     }
 

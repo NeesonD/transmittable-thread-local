@@ -117,8 +117,13 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
     public final void set(T value) {
         super.set(value);
         // may set null to remove value
-        if (null == value) removeValue();
-        else addValue();
+        if (null == value) {
+            removeValue();
+        }
+        // 这里多了一个 addValue 的操作
+        else {
+            addValue();
+        }
     }
 
     /**
@@ -158,6 +163,7 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
     @SuppressWarnings("unchecked")
     private void addValue() {
         if (!holder.get().containsKey(this)) {
+            // 这里 get 到的就是上面 initialValue（） 中的 WeakHashMap
             holder.get().put((TransmittableThreadLocal<Object>) this, null); // WeakHashMap supports null value.
         }
     }
@@ -311,6 +317,7 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
 
         private static WeakHashMap<TransmittableThreadLocal<Object>, Object> captureTtlValues() {
             WeakHashMap<TransmittableThreadLocal<Object>, Object> ttl2Value = new WeakHashMap<TransmittableThreadLocal<Object>, Object>();
+            // holder 拥有的是上下文新值，将 threadlocal 和 threadLocal 中的值设置到 ttl2Value
             for (TransmittableThreadLocal<Object> threadLocal : holder.get().keySet()) {
                 ttl2Value.put(threadLocal, threadLocal.copyValue());
             }
