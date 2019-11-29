@@ -51,7 +51,7 @@ public final class TtlRunnable implements Runnable, TtlEnhanced, TtlAttachments 
         if (captured == null || releaseTtlValueReferenceAfterRun && !capturedRef.compareAndSet(captured, null)) {
             throw new IllegalStateException("TTL value reference is released after run!");
         }
-
+        // 将 captured 数据拷贝一份，并且将数据放到子线程的 threadlocal 中
         Object backup = replay(captured);
         try {
             runnable.run();

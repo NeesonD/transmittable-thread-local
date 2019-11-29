@@ -362,6 +362,7 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
 
                 // clear the TTL values that is not in captured
                 // avoid the extra TTL values after replay when run task
+                // 这里维持快照中的 threadLocal 个数，因为 holder 是实时的，可能在任务提交之后还放入了其它的 threadlocal，这部分的 threadlocal 要清掉
                 if (!captured.containsKey(threadLocal)) {
                     iterator.remove();
                     threadLocal.superRemove();
@@ -372,6 +373,7 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
             setTtlValuesTo(captured);
 
             // call beforeExecute callback
+            // 没有实现
             doExecuteCallback(true);
 
             return backup;
@@ -448,6 +450,7 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
         private static void setTtlValuesTo(@NonNull WeakHashMap<TransmittableThreadLocal<Object>, Object> ttlValues) {
             for (Map.Entry<TransmittableThreadLocal<Object>, Object> entry : ttlValues.entrySet()) {
                 TransmittableThreadLocal<Object> threadLocal = entry.getKey();
+                // 这里在子线程中执行了一次 set 操作，保证了 子线程中 threadlocalmap 有数据
                 threadLocal.set(entry.getValue());
             }
         }
