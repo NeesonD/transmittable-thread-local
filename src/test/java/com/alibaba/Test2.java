@@ -21,18 +21,18 @@ public class Test2 {
         ExecutorService executor = Executors.newFixedThreadPool(1);
         executor.submit(() -> {});
 
-        TransmittableThreadLocal<String> child = new TransmittableThreadLocal<>();
-        executor.submit(() -> {
-            child.set("value-set-in-child");
-            System.out.println(Thread.currentThread().getName() + ": " + child.get());
-        });
-
-        final TransmittableThreadLocal<String> parent = new TransmittableThreadLocal<>();
-        parent.set("value-set-in-parent");
-        executor.submit(TtlRunnable.get(() -> {
-            System.out.println(Thread.currentThread().getName() + ": " + child.get()); // 这里child.get为null
-            System.out.println(Thread.currentThread().getName() + ": " + parent.get());
-        }));
+//        TransmittableThreadLocal<String> child = new TransmittableThreadLocal<>();
+//        executor.submit(() -> {
+//            child.set("value-set-in-child");
+//            System.out.println(Thread.currentThread().getName() + ": " + child.get());
+//        });
+//
+//        final TransmittableThreadLocal<String> parent = new TransmittableThreadLocal<>();
+//        parent.set("value-set-in-parent");
+//        executor.submit(TtlRunnable.get(() -> {
+//            System.out.println(Thread.currentThread().getName() + ": " + child.get()); // 这里child.get为null
+//            System.out.println(Thread.currentThread().getName() + ": " + parent.get());
+//        }));
 
         executor.shutdown();
     }

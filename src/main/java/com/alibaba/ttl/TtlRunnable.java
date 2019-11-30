@@ -46,17 +46,17 @@ public final class TtlRunnable implements Runnable, TtlEnhanced, TtlAttachments 
      */
     @Override
     public void run() {
-        // 获取到的就是 Snapshot 对象
+        // 获取到的就是 Snapshot 对象，这个对象承载的是父线程上下文
         Object captured = capturedRef.get();
         if (captured == null || releaseTtlValueReferenceAfterRun && !capturedRef.compareAndSet(captured, null)) {
             throw new IllegalStateException("TTL value reference is released after run!");
         }
-        // 将 captured 数据拷贝一份，并且将数据放到子线程的 threadlocal 中
+        // 将子线程原有的上下文备份一份，并且重放父线程上下文
         Object backup = replay(captured);
         try {
             runnable.run();
         } finally {
-            // 还原本身上下文，一般是空
+            // 还原子线程原有的上下文，线程创建时候有什么就保留什么
             restore(backup);
         }
     }

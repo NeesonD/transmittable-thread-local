@@ -23,12 +23,12 @@ public class StepTest {
     private static TransmittableThreadLocal<Integer> transmittableThreadLocal2 = new TransmittableThreadLocal();
 
     public static void main(String[] args) throws InterruptedException {
-        es.execute(()->{
-            System.out.println(Thread.currentThread().getName());
-        });
-        Thread.sleep(2000L);
+//        es.execute(()->{
+//            System.out.println(Thread.currentThread().getName());
+//        });
+//        Thread.sleep(2000L);
         System.out.println("===");
-        Thread.sleep(2000L);
+//        Thread.sleep(2000L);
         transmittableThreadLocal.set(5);
         transmittableThreadLocal2.set(6);
         es.execute(()->{

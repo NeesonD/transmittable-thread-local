@@ -106,7 +106,9 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
     @Override
     public final T get() {
         T value = super.get();
-        if (null != value) addValue();
+        if (null != value) {
+            addValue();
+        }
         return value;
     }
 
@@ -115,7 +117,7 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
      */
     @Override
     public final void set(T value) {
-        // 这里是向 inheritableThreadLocals 设值
+        // 这里是向当前线程 inheritableThreadLocals 设值
         super.set(value);
         // may set null to remove value
         if (null == value) {
@@ -148,6 +150,8 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
     // 1. The value of holder is type WeakHashMap<TransmittableThreadLocal<Object>, ?>,
     //    but it is used as *Set* (aka. do NOT use about value, always null).
     // 2. WeakHashMap support *null* value.
+    // holder 的作用是为了给所有线程初始化一个 InheritableThreadLocal<WeakHashMap<TransmittableThreadLocal<Object>, ?>>
+    // 注意 holder 里面只保存 key 不保存 value
     private static InheritableThreadLocal<WeakHashMap<TransmittableThreadLocal<Object>, ?>> holder =
         new InheritableThreadLocal<WeakHashMap<TransmittableThreadLocal<Object>, ?>>() {
             @Override
@@ -167,6 +171,7 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
         // holder 也是一个 InheritableThreadLocal 对象, holder 这个对象是共享的，但是 holder get 出来的 WeakHashMap 是每个线程独享的
         if (!holder.get().containsKey(this)) {
             // 这里 get 到的就是上面 initialValue（） 中的 WeakHashMap
+            // holder 里面存的都是 threadlocal 这个 key，是没有保存value的，value 要从 Transmitter
             holder.get().put((TransmittableThreadLocal<Object>) this, null); // WeakHashMap supports null value.
         }
     }
@@ -318,9 +323,10 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
             return new Snapshot(captureTtlValues(), captureThreadLocalValues());
         }
 
+        // 这个时候还是在父线程
         private static WeakHashMap<TransmittableThreadLocal<Object>, Object> captureTtlValues() {
             WeakHashMap<TransmittableThreadLocal<Object>, Object> ttl2Value = new WeakHashMap<TransmittableThreadLocal<Object>, Object>();
-            // holder 拥有的所有上下文的 key
+            // 将数据拷贝到 ttl2Value
             for (TransmittableThreadLocal<Object> threadLocal : holder.get().keySet()) {
                 ttl2Value.put(threadLocal, threadLocal.copyValue());
             }
@@ -356,7 +362,7 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
         @NonNull
         private static WeakHashMap<TransmittableThreadLocal<Object>, Object> replayTtlValues(@NonNull WeakHashMap<TransmittableThreadLocal<Object>, Object> captured) {
             WeakHashMap<TransmittableThreadLocal<Object>, Object> backup = new WeakHashMap<TransmittableThreadLocal<Object>, Object>();
-            // 这里 holder.get() 是获取本线程的上下文，一般是为空，但是在初次创建线程的时候，有可能把 InheritableThreadLocal 传递进来了，所以这里要处理一下
+            // 这里 holder.get() 是获取本线程（子线程）的上下文，一般是为空，但是在初次创建线程的时候，有可能把 InheritableThreadLocal 传递进来了，所以这里要处理一下
             for (final Iterator<TransmittableThreadLocal<Object>> iterator = holder.get().keySet().iterator(); iterator.hasNext(); ) {
                 TransmittableThreadLocal<Object> threadLocal = iterator.next();
 
@@ -372,7 +378,7 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
             }
 
             // set TTL values to captured
-            // 把上下文设到子线程中，重放父线程操作
+            // 把上下文设到子线程中，重放父线程操作，这时候 holder 里面存的就是 父线程上下文的 key
             setTtlValuesTo(captured);
 
             // call beforeExecute callback
@@ -440,6 +446,7 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
 
                 // clear the TTL values that is not in backup
                 // avoid the extra TTL values after restore
+                // 删掉所有不属于初始子线程上下文的 key
                 if (!backup.containsKey(threadLocal)) {
                     iterator.remove();
                     threadLocal.superRemove();
@@ -447,6 +454,7 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
             }
 
             // restore TTL values
+            // 将子线程初始的上下文在设置回去
             setTtlValuesTo(backup);
         }
 
