@@ -155,6 +155,7 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
                 return new WeakHashMap<TransmittableThreadLocal<Object>, Object>();
             }
 
+            // 这里保证了线程池初始化线程的时候，子线程都会带上 parentValue（一般是空值） WeakHashMap，保证了每个线程都有 holder 这个上下文
             @Override
             protected WeakHashMap<TransmittableThreadLocal<Object>, ?> childValue(WeakHashMap<TransmittableThreadLocal<Object>, ?> parentValue) {
                 return new WeakHashMap<TransmittableThreadLocal<Object>, Object>(parentValue);
