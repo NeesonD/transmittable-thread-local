@@ -35,7 +35,7 @@ public final class TtlRunnable implements Runnable, TtlEnhanced, TtlAttachments 
     private final boolean releaseTtlValueReferenceAfterRun;
 
     private TtlRunnable(@NonNull Runnable runnable, boolean releaseTtlValueReferenceAfterRun) {
-        // 获取父线程上下文，并绑定到 capturedRef
+        // 获取父线程上下文，并绑定到 capturedRef，注意这里的上下文个数是快照
         this.capturedRef = new AtomicReference<Object>(capture());
         this.runnable = runnable;
         this.releaseTtlValueReferenceAfterRun = releaseTtlValueReferenceAfterRun;
@@ -56,6 +56,7 @@ public final class TtlRunnable implements Runnable, TtlEnhanced, TtlAttachments 
         try {
             runnable.run();
         } finally {
+            // 还原本身上下文，一般是空
             restore(backup);
         }
     }

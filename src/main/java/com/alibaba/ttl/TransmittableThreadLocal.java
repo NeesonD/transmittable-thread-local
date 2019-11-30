@@ -115,12 +115,13 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
      */
     @Override
     public final void set(T value) {
+        // 这里是向 inheritableThreadLocals 设值
         super.set(value);
         // may set null to remove value
         if (null == value) {
             removeValue();
         }
-        // 这里多了一个 addValue 的操作
+        // 这里多了一个 addValue 的操作，这里向当前线程加多了一个 InheritableThreadLocal
         else {
             addValue();
         }
@@ -162,6 +163,7 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
 
     @SuppressWarnings("unchecked")
     private void addValue() {
+        // holder 也是一个 InheritableThreadLocal 对象, holder 这个对象是共享的，但是 holder get 出来的 WeakHashMap 是每个线程独享的
         if (!holder.get().containsKey(this)) {
             // 这里 get 到的就是上面 initialValue（） 中的 WeakHashMap
             holder.get().put((TransmittableThreadLocal<Object>) this, null); // WeakHashMap supports null value.
@@ -317,7 +319,7 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
 
         private static WeakHashMap<TransmittableThreadLocal<Object>, Object> captureTtlValues() {
             WeakHashMap<TransmittableThreadLocal<Object>, Object> ttl2Value = new WeakHashMap<TransmittableThreadLocal<Object>, Object>();
-            // holder 拥有的是上下文新值，将 threadlocal 和 threadLocal 中的值设置到 ttl2Value
+            // holder 拥有的所有上下文的 key
             for (TransmittableThreadLocal<Object> threadLocal : holder.get().keySet()) {
                 ttl2Value.put(threadLocal, threadLocal.copyValue());
             }
@@ -353,16 +355,15 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
         @NonNull
         private static WeakHashMap<TransmittableThreadLocal<Object>, Object> replayTtlValues(@NonNull WeakHashMap<TransmittableThreadLocal<Object>, Object> captured) {
             WeakHashMap<TransmittableThreadLocal<Object>, Object> backup = new WeakHashMap<TransmittableThreadLocal<Object>, Object>();
-
+            // 这里 holder.get() 是获取本线程的上下文，一般是为空，但是在初次创建线程的时候，有可能把 InheritableThreadLocal 传递进来了，所以这里要处理一下
             for (final Iterator<TransmittableThreadLocal<Object>> iterator = holder.get().keySet().iterator(); iterator.hasNext(); ) {
                 TransmittableThreadLocal<Object> threadLocal = iterator.next();
 
-                // backup
+                // backup，这里相当于备份该线程本身的上下文
                 backup.put(threadLocal, threadLocal.get());
 
                 // clear the TTL values that is not in captured
                 // avoid the extra TTL values after replay when run task
-                // 这里维持快照中的 threadLocal 个数，因为 holder 是实时的，可能在任务提交之后还放入了其它的 threadlocal，这部分的 threadlocal 要清掉
                 if (!captured.containsKey(threadLocal)) {
                     iterator.remove();
                     threadLocal.superRemove();
@@ -370,6 +371,7 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
             }
 
             // set TTL values to captured
+            // 把上下文设到子线程中，重放父线程操作
             setTtlValuesTo(captured);
 
             // call beforeExecute callback
@@ -431,7 +433,7 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
         private static void restoreTtlValues(@NonNull WeakHashMap<TransmittableThreadLocal<Object>, Object> backup) {
             // call afterExecute callback
             doExecuteCallback(false);
-
+            // holder.get() 还是本线程的 weakHashMap
             for (final Iterator<TransmittableThreadLocal<Object>> iterator = holder.get().keySet().iterator(); iterator.hasNext(); ) {
                 TransmittableThreadLocal<Object> threadLocal = iterator.next();
 
