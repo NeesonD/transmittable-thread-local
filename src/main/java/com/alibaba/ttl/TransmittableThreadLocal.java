@@ -170,8 +170,8 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
     private void addValue() {
         // holder 也是一个 InheritableThreadLocal 对象, holder 这个对象是共享的，但是 holder get 出来的 WeakHashMap 是每个线程独享的
         if (!holder.get().containsKey(this)) {
-            // 这里 get 到的就是上面 initialValue（） 中的 WeakHashMap
-            // holder 里面存的都是 threadlocal 这个 key，是没有保存value的，value 要从 Transmitter
+            // 这里 get 到的就是上面 childValue（） 中的 WeakHashMap
+            // holder 里面存的都是 threadlocal 这个 key，是没有保存value的，value 要从 Transmitter 中的 capture 拿
             holder.get().put((TransmittableThreadLocal<Object>) this, null); // WeakHashMap supports null value.
         }
     }
@@ -359,6 +359,7 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
             return new Snapshot(replayTtlValues(capturedSnapshot.ttl2Value), replayThreadLocalValues(capturedSnapshot.threadLocal2Value));
         }
 
+        // 这个时候在子线程
         @NonNull
         private static WeakHashMap<TransmittableThreadLocal<Object>, Object> replayTtlValues(@NonNull WeakHashMap<TransmittableThreadLocal<Object>, Object> captured) {
             WeakHashMap<TransmittableThreadLocal<Object>, Object> backup = new WeakHashMap<TransmittableThreadLocal<Object>, Object>();
@@ -437,6 +438,7 @@ public class TransmittableThreadLocal<T> extends InheritableThreadLocal<T> imple
             restoreThreadLocalValues(backupSnapshot.threadLocal2Value);
         }
 
+        // 还是在子线程
         private static void restoreTtlValues(@NonNull WeakHashMap<TransmittableThreadLocal<Object>, Object> backup) {
             // call afterExecute callback
             doExecuteCallback(false);
